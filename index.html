@@ -55,7 +55,7 @@ body.aviso .acceso { display: none; }
 </main>
 <script>
 (() => {
-const APP = {"salt":"iC2irGgFm4EjEkwoJ0uoog==","iter":150000,"f":"f827cd3cd7c0f7.txt"};
+const APP = {"salt":"sqzoqCjfPtl0MlnXl11o4w==","iter":150000,"f":"f827cd3cd7c0f7.txt","v":"mwtop7l7"};
 const b64 = s => Uint8Array.from(atob(s), c => c.charCodeAt(0));
 const $ = s => document.querySelector(s);
 let code = '', ocupado = false, html = null;
@@ -63,7 +63,8 @@ const pintar = () => document.querySelectorAll('.slot').forEach((s, i) => s.clas
 async function abrir(c) {
   const base = await crypto.subtle.importKey('raw', new TextEncoder().encode(c), 'PBKDF2', false, ['deriveKey']);
   const key = await crypto.subtle.deriveKey({ name: 'PBKDF2', salt: b64(APP.salt), iterations: APP.iter, hash: 'SHA-256' }, base, { name: 'AES-GCM', length: 256 }, false, ['decrypt']);
-  const b = b64((await (await fetch(APP.f)).text()).trim());
+  const r = await fetch(APP.f + '?v=' + APP.v, { cache: 'no-store' }); if (!r.ok) throw new Error('carga');
+  const b = b64((await r.text()).trim());
   return new TextDecoder().decode(await crypto.subtle.decrypt({ name: 'AES-GCM', iv: b.slice(0, 12) }, key, b.slice(12)));
 }
 function mostrar() { document.open(); document.write(html); document.close(); }
@@ -76,7 +77,7 @@ async function probar(c, guardado) {
     if (!guardado && esMovil()) { document.body.classList.add('aviso'); $('#igual').focus(); } else mostrar();
   } catch (e) {
     if (guardado) { $('#msg').textContent = ''; ocupado = false; return; }
-    $('#slots').classList.add('bad'); $('#msg').textContent = 'Código incorrecto'; $('#msg').classList.add('bad');
+    $('#slots').classList.add('bad'); $('#msg').textContent = e.message === 'carga' ? 'No se ha podido cargar. Recarga la página.' : 'Código incorrecto'; $('#msg').classList.add('bad');
     setTimeout(() => { $('#slots').classList.remove('bad'); code = ''; pintar(); ocupado = false; }, 700);
   }
 }
