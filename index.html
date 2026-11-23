@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Acceso</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Raleway:wght@300;400;600;700&display=swap" rel="stylesheet">
+<style>
+:root { --bg: #08090b; --text: #f1f3f5; --muted: #8d96a3; --accent: #e2262f; --display: "Raleway", "Helvetica Neue", Arial, sans-serif; color-scheme: dark; }
+* { box-sizing: border-box; }
+html, body { height: 100%; margin: 0; }
+body { background: var(--bg); color: var(--text); font-family: var(--display); display: grid; place-items: center; -webkit-font-smoothing: antialiased; }
+button { font: inherit; color: inherit; background: none; border: 0; cursor: pointer; }
+button:focus-visible { outline: 2px solid var(--accent); outline-offset: 4px; border-radius: 8px; }
+.marca { position: fixed; top: 22px; left: 30px; font-size: 13px; font-weight: 700; letter-spacing: .14em; }
+.marca b { color: var(--accent); }
+main { display: grid; justify-items: center; gap: 28px; text-align: center; padding: 24px; }
+.lab { margin: 0; font-size: 15px; color: var(--muted); }
+.slots { display: flex; gap: 18px; }
+.slot { width: 10px; height: 10px; border-radius: 50%; border: 1px solid rgba(241, 243, 245, .35); transition: background .2s, transform .2s; }
+.slot.full { background: var(--text); border-color: var(--text); transform: scale(1.15); }
+.slots.bad .slot { background: var(--accent); border-color: var(--accent); }
+.slots.bad { animation: shake .45s; }
+@keyframes shake { 20%, 60% { transform: translateX(-10px); } 40%, 80% { transform: translateX(10px); } }
+.keypad { display: grid; grid-template-columns: repeat(3, 72px); gap: 4px 18px; }
+.key { height: 60px; font-size: 26px; font-weight: 300; color: rgba(241, 243, 245, .6); border-radius: 50%; transition: color .2s, background .2s; }
+.key:hover { color: #fff; background: rgba(255, 255, 255, .04); }
+.key.text { font-size: 13px; font-weight: 400; }
+.msg { min-height: 20px; margin: 0; font-size: 13px; color: rgba(241, 243, 245, .55); }
+.msg.bad { color: #ff8a8f; }
+.movil { display: none; max-width: 340px; gap: 18px; justify-items: center; }
+.movil h1 { margin: 0; font-size: 24px; font-weight: 600; line-height: 1.25; }
+.movil p { margin: 0; font-size: 15px; color: var(--muted); line-height: 1.5; }
+.movil button { min-height: 48px; padding: 12px 26px; border-radius: 999px; background: var(--accent); color: #fff; font-weight: 600; font-size: 15px; }
+.acceso { display: grid; justify-items: center; gap: 28px; }
+body.aviso .acceso { display: none; }
+@media (max-width: 600px) { .marca { position: static; margin-bottom: 8px; } body { place-items: start center; padding-top: 40px; } main { padding-top: 10px; } } body.aviso .movil { display: grid; }
+@media (prefers-reduced-motion: reduce) { .slots.bad { animation: none; } }
+</style>
+</head>
+<body>
+<main>
+  <div class="acceso">
+    <p class="lab" id="lab">Introduce el código</p>
+    <div class="slots" id="slots" aria-hidden="true"><i class="slot"></i><i class="slot"></i><i class="slot"></i><i class="slot"></i><i class="slot"></i><i class="slot"></i></div>
+    <div class="keypad" id="keypad" role="group" aria-labelledby="lab"></div>
+    <p class="msg" id="msg" aria-live="polite"></p>
+  </div>
+  <div class="movil" role="dialog" aria-labelledby="mvT">
+    <h1 id="mvT">Esta experiencia se ve mejor en un ordenador</h1>
+    <p>La presentación está pensada para una pantalla grande. En el móvil verás una versión reducida.</p>
+    <button type="button" id="igual">Abrir de todas formas</button>
+  </div>
+</main>
+<script>
+(() => {
+const APP = {"salt":"V65ecD71pDU1NBRl/RshHA==","iter":150000,"f":"f827cd3cd7c0f7.txt"};
+const b64 = s => Uint8Array.from(atob(s), c => c.charCodeAt(0));
+const $ = s => document.querySelector(s);
+let code = '', ocupado = false, html = null;
+const pintar = () => document.querySelectorAll('.slot').forEach((s, i) => s.classList.toggle('full', i < code.length));
+async function abrir(c) {
+  const base = await crypto.subtle.importKey('raw', new TextEncoder().encode(c), 'PBKDF2', false, ['deriveKey']);
+  const key = await crypto.subtle.deriveKey({ name: 'PBKDF2', salt: b64(APP.salt), iterations: APP.iter, hash: 'SHA-256' }, base, { name: 'AES-GCM', length: 256 }, false, ['decrypt']);
+  const b = b64((await (await fetch(APP.f)).text()).trim());
+  return new TextDecoder().decode(await crypto.subtle.decrypt({ name: 'AES-GCM', iv: b.slice(0, 12) }, key, b.slice(12)));
+}
+function mostrar() { document.open(); document.write(html); document.close(); }
+const esMovil = () => matchMedia('(max-width: 820px), (pointer: coarse) and (max-width: 1100px)').matches;
+async function probar(c, guardado) {
+  ocupado = true; $('#msg').textContent = 'Comprobando…'; $('#msg').classList.remove('bad');
+  try {
+    html = await abrir(c);
+    try { sessionStorage.setItem('m46', c); } catch (e) {}
+    if (!guardado && esMovil()) { document.body.classList.add('aviso'); $('#igual').focus(); } else mostrar();
+  } catch (e) {
+    if (guardado) { $('#msg').textContent = ''; ocupado = false; return; }
+    $('#slots').classList.add('bad'); $('#msg').textContent = 'Código incorrecto'; $('#msg').classList.add('bad');
+    setTimeout(() => { $('#slots').classList.remove('bad'); code = ''; pintar(); ocupado = false; }, 700);
+  }
+}
+function pulsar(k) {
+  if (ocupado) return;
+  if (k === 'Borrar') code = code.slice(0, -1); else if (code.length < 6) code += k;
+  pintar(); if (code.length === 6) probar(code, false);
+}
+['1', '2', '3', '4', '5', '6', '7', '8', '9', '', '0', 'Borrar'].forEach(k => {
+  if (!k) { $('#keypad').appendChild(document.createElement('span')); return; }
+  const b = document.createElement('button'); b.type = 'button'; b.className = 'key' + (k === 'Borrar' ? ' text' : ''); b.textContent = k;
+  b.setAttribute('aria-label', k === 'Borrar' ? 'Borrar' : 'Cifra ' + k); b.onclick = () => pulsar(k); $('#keypad').appendChild(b);
+});
+addEventListener('keydown', e => { if (document.body.classList.contains('aviso')) return; if (/^\d$/.test(e.key)) pulsar(e.key); else if (e.key === 'Backspace') pulsar('Borrar'); });
+$('#igual').onclick = mostrar;
+(() => { let s = null; try { s = sessionStorage.getItem('m46'); } catch (e) {} if (s) probar(s, true); })();
+})();
+</script>
+</body>
+</html>
